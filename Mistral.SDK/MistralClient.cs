@@ -53,7 +53,7 @@ namespace Mistral.SDK
             Embeddings = new EmbeddingsEndpoint(this);
         }
 
-        internal static JsonSerializerOptions JsonSerializationOptions { get; } = new()
+        public static JsonSerializerOptions JsonSerializationOptions { get; } = new()
         {
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             Converters = { new JsonStringEnumConverter() },

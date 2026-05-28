@@ -381,13 +381,13 @@ namespace Mistral.SDK.Completions
         {
             List<AIContent> contents = new();
 
-            foreach (var content in response.Choices)
+            foreach (var choice in response.Choices)
             {
-                if (content.Message.ToolCalls is not null)
+                if (choice.Message.ToolCalls is not null)
                 {
-                    contents.Add(new TextContent(content.Message.Content));
+                    contents.Add(new TextContent(ExtractText(choice.Message)));
 
-                    foreach (var toolCall in content.Message.ToolCalls)
+                    foreach (var toolCall in choice.Message.ToolCalls)
                     {
                         Dictionary<string, object> arguments = null;
                         if (toolCall.Function.Arguments is not null)
@@ -403,11 +403,23 @@ namespace Mistral.SDK.Completions
                 }
                 else
                 {
-                    contents.Add(new TextContent(content.Message.Content));
+                    contents.Add(new TextContent(ExtractText(choice.Message)));
                 }
             }
 
             return contents;
+
+            static string ExtractText(DTOs.ChatMessage message)
+            {
+                if (message.ContentChunks is { Count: > 0 })
+                {
+                    return string.Concat(
+                        message.ContentChunks
+                            .Where(c => c.Type == "text" && c.Text is not null)
+                            .Select(c => c.Text));
+                }
+                return message.Content ?? string.Empty;
+            }
         }
 
         void IDisposable.Dispose() { }
