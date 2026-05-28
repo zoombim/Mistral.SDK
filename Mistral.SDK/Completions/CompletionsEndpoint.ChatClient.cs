@@ -415,8 +415,7 @@ namespace Mistral.SDK.Completions
         object IChatClient.GetService(Type serviceType, object serviceKey) =>
             serviceKey is not null ? null :
             serviceType == typeof(ChatClientMetadata) ? _metadata ??= new ChatClientMetadata(nameof(MistralClient), new Uri(Url)) :
-            serviceType.IsInstanceOfType(this) ? this : 
-            null;
+            serviceType.IsInstanceOfType(this) ? this : null;
 
         private ChatClientMetadata _metadata;
 
