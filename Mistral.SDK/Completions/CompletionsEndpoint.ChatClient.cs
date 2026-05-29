@@ -349,7 +349,7 @@ namespace Mistral.SDK.Completions
                     .ToList();
             }
 
-            if (tools is { Count: > 0 } && options?.ResponseFormat is not ChatResponseFormatJson)
+            if (tools is { Count: > 0 } && options?.ResponseFormat == null)
             {
                 if (request.Tools is null)
                 {
