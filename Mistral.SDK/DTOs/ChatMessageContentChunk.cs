@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Mistral.SDK.DTOs
 {
@@ -25,5 +26,9 @@ namespace Mistral.SDK.DTOs
         [JsonPropertyName("document_url")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? DocumentUrl { get; set; }
+
+        [JsonPropertyName("thinking")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<ChatMessageContentChunk>? Thinking { get; set; }
     }
 }

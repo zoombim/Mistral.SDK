@@ -1,5 +1,8 @@
 ﻿using System.Text.Json;
 using Mistral.SDK.DTOs;
+using Mistral.SDK.Completions;
+using Microsoft.Extensions.AI;
+using ChatMessage = Mistral.SDK.DTOs.ChatMessage;
 
 namespace Mistral.SDK.Tests
 {
@@ -9,7 +12,6 @@ namespace Mistral.SDK.Tests
         [TestMethod]
         public void TestContentConverterWithStringContent()
         {
-            // Regular model response with simple string content
             string json = @"{
                 ""id"": ""test123"",
                 ""object"": ""chat.completion"",
@@ -57,7 +59,13 @@ namespace Mistral.SDK.Tests
                             ""content"": [
                                 {
                                     ""type"": ""thinking"",
-                                    ""text"": ""Let me think about this...""
+                                    ""thinking"": [
+                                        {
+                                            ""type"": ""text"",
+                                            ""text"": ""Let me think about this...""
+                                        }
+                                    ],
+                                    ""closed"": true
                                 },
                                 {
                                     ""type"": ""text"",
@@ -81,21 +89,26 @@ namespace Mistral.SDK.Tests
             var message = response.Choices[0].Message;
             Assert.IsNotNull(message);
 
-            // With #39, array content lands in ContentChunks, not Content string
             Assert.IsNotNull(message.ContentChunks);
             Assert.AreEqual(2, message.ContentChunks.Count);
+
+            // Thinking chunk
             Assert.AreEqual("thinking", message.ContentChunks[0].Type);
+            Assert.IsNotNull(message.ContentChunks[0].Thinking);
+            Assert.AreEqual(1, message.ContentChunks[0].Thinking.Count);
+            Assert.AreEqual("text", message.ContentChunks[0].Thinking[0].Type);
+            Assert.AreEqual("Let me think about this...", message.ContentChunks[0].Thinking[0].Text);
+
+            // Text chunk
             Assert.AreEqual("text", message.ContentChunks[1].Type);
             Assert.AreEqual("Here is my response.", message.ContentChunks[1].Text);
 
-            // Content itself should be empty, not a raw JSON string
             Assert.AreEqual(string.Empty, message.Content);
         }
 
         [TestMethod]
         public void TestContentConverterWithNullContent()
         {
-            // Response with null content
             string json = @"{
                 ""id"": ""test123"",
                 ""object"": ""chat.completion"",
@@ -130,17 +143,13 @@ namespace Mistral.SDK.Tests
         [TestMethod]
         public void TestContentConverterRoundTrip()
         {
-            // Create a message with string content
             var message = new ChatMessage
             {
                 Role = ChatMessage.RoleEnum.Assistant,
                 Content = "Test content"
             };
 
-            // Serialize to JSON
             var json = JsonSerializer.Serialize(message, MistralClient.JsonSerializationOptions);
-
-            // Deserialize back
             var deserialized = JsonSerializer.Deserialize<ChatMessage>(json, MistralClient.JsonSerializationOptions);
 
             Assert.IsNotNull(deserialized);
@@ -179,11 +188,64 @@ namespace Mistral.SDK.Tests
             var delta = response.Choices[0].Delta;
             Assert.IsNotNull(delta);
 
-            // Delta content chunks should be parsed
             Assert.IsNotNull(delta.ContentChunks);
             Assert.AreEqual(1, delta.ContentChunks.Count);
             Assert.AreEqual("text", delta.ContentChunks[0].Type);
             Assert.AreEqual("Streaming text...", delta.ContentChunks[0].Text);
+        }
+
+        [TestMethod]
+        public void TestProcessResponseContentReturnsThinkingAsTextReasoningContent()
+        {
+            string json = @"{
+                ""id"": ""25b5475d6e2c48c9a9d80a48a4f302a3"",
+                ""object"": ""chat.completion"",
+                ""created"": 1761293297,
+                ""model"": ""magistral-medium-latest"",
+                ""choices"": [
+                    {
+                        ""index"": 0,
+                        ""message"": {
+                            ""role"": ""assistant"",
+                            ""content"": [
+                                {
+                                    ""type"": ""thinking"",
+                                    ""thinking"": [
+                                        {
+                                            ""type"": ""text"",
+                                            ""text"": ""Let me think about this...""
+                                        }
+                                    ],
+                                    ""closed"": true
+                                },
+                                {
+                                    ""type"": ""text"",
+                                    ""text"": ""Here is my response.""
+                                }
+                            ]
+                        },
+                        ""finish_reason"": ""stop""
+                    }
+                ],
+                ""usage"": {
+                    ""prompt_tokens"": 10,
+                    ""completion_tokens"": 1360,
+                    ""total_tokens"": 1370
+                }
+            }";
+
+            var response = JsonSerializer.Deserialize<ChatCompletionResponse>(json, MistralClient.JsonSerializationOptions);
+            var contents = CompletionsEndpoint.ProcessResponseContent(response);
+
+            Assert.AreEqual(2, contents.Count);
+
+            var reasoningContent = contents[0] as TextReasoningContent;
+            Assert.IsNotNull(reasoningContent);
+            Assert.AreEqual("Let me think about this...", reasoningContent.Text);
+
+            var textContent = contents[1] as TextContent;
+            Assert.IsNotNull(textContent);
+            Assert.AreEqual("Here is my response.", textContent.Text);
         }
     }
 }

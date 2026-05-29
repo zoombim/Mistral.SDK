@@ -122,5 +122,12 @@ namespace Mistral.SDK.DTOs
 
         [JsonPropertyName("tools")]
         private List<Common.Tool> ToolsForMistral => Tools?.ToList();
+
+        /// <summary>
+        /// Controls reasoning behavior. Use "high" to enable full thinking traces, "none" to disable.
+        /// Only supported on mistral-small-latest and mistral-medium-3-5 (adjustable reasoning).
+        /// </summary>
+        [JsonPropertyName("reasoning_effort")]
+        public string? ReasoningEffort { get; set; }
     }
 }
