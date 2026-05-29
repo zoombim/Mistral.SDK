@@ -98,7 +98,7 @@ namespace Mistral.SDK.Completions
                             }
                         }
                     }
-                    else if (choice.Delta?.Content is not null)
+                    else if (!string.IsNullOrEmpty(choice.Delta?.Content))
                     {
                         update.Contents.Add(new TextContent(choice.Delta.Content));
                     }
