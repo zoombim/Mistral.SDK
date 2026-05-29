@@ -79,24 +79,7 @@ namespace Mistral.SDK.Completions
                     if (choice.Delta?.ContentChunks is { Count: > 0 })
                     {
                         foreach (var chunk in choice.Delta.ContentChunks)
-                        {
-                            switch (chunk.Type)
-                            {
-                                case "thinking":
-                                    string thinkingText = string.Concat(
-                                        chunk.Thinking?
-                                            .Where(t => t.Type == "text" && t.Text is not null)
-                                            .Select(t => t.Text) ?? []);
-                                    if (!string.IsNullOrEmpty(thinkingText))
-                                        update.Contents.Add(new TextReasoningContent(thinkingText));
-                                    break;
-
-                                case "text":
-                                    if (chunk.Text is not null)
-                                        update.Contents.Add(new TextContent(chunk.Text));
-                                    break;
-                            }
-                        }
+                            AddContentFromChunk(chunk, update.Contents);
                     }
                     else if (!string.IsNullOrEmpty(choice.Delta?.Content))
                     {
@@ -413,24 +396,7 @@ namespace Mistral.SDK.Completions
                 if (choice.Message.ContentChunks is { Count: > 0 })
                 {
                     foreach (var chunk in choice.Message.ContentChunks)
-                    {
-                        switch (chunk.Type)
-                        {
-                            case "thinking":
-                                string thinkingText = string.Concat(
-                                    chunk.Thinking?
-                                        .Where(t => t.Type == "text" && t.Text is not null)
-                                        .Select(t => t.Text) ?? []);
-                                if (!string.IsNullOrEmpty(thinkingText))
-                                    contents.Add(new TextReasoningContent(thinkingText));
-                                break;
-
-                            case "text":
-                                if (chunk.Text is not null)
-                                    contents.Add(new TextContent(chunk.Text));
-                                break;
-                        }
-                    }
+                        AddContentFromChunk(chunk, contents);
                 }
                 else
                 {
@@ -458,6 +424,26 @@ namespace Mistral.SDK.Completions
             return contents;
         }
 
+        private static void AddContentFromChunk(ChatMessageContentChunk chunk, IList<AIContent> target)
+        {
+            switch (chunk.Type)
+            {
+                case "thinking":
+                    var thinkingText = string.Concat(
+                        chunk.Thinking?
+                            .Where(t => t.Type == "text" && t.Text is not null)
+                            .Select(t => t.Text) ?? []);
+                    if (!string.IsNullOrEmpty(thinkingText))
+                        target.Add(new TextReasoningContent(thinkingText));
+                    break;
+
+                case "text":
+                    if (chunk.Text is not null)
+                        target.Add(new TextContent(chunk.Text));
+                    break;
+            }
+        }
+
         void IDisposable.Dispose() { }
 
         object IChatClient.GetService(Type serviceType, object serviceKey) =>
@@ -479,6 +465,4 @@ namespace Mistral.SDK.Completions
             public Dictionary<string, JsonElement> Properties { get; set; } = [];
         }
     }
-
-    
 }
