@@ -56,7 +56,7 @@ namespace Mistral.SDK.Completions
                     ChatRole role = choice.Delta?.Role switch
                     {
                         DTOs.ChatMessage.RoleEnum.System => ChatRole.System,
-                        DTOs.ChatMessage.RoleEnum.Assistant => ChatRole.Assistant, // formerly (an error or a typo?) ChatRole.User
+                        DTOs.ChatMessage.RoleEnum.Assistant => ChatRole.Assistant,
                         _ => ChatRole.User,
                     };
 
@@ -67,7 +67,7 @@ namespace Mistral.SDK.Completions
                         _ => ChatFinishReason.Stop
                     };
 
-                    var update = new ChatResponseUpdate(role, choice.Delta?.Content)
+                    var update = new ChatResponseUpdate(role, [])
                     {
                         MessageId = response.Id,
                         ModelId = response.Model,
@@ -75,6 +75,16 @@ namespace Mistral.SDK.Completions
                         ResponseId = response.Id,
                         FinishReason = finishReason,
                     };
+
+                    if (choice.Delta?.ContentChunks is { Count: > 0 })
+                    {
+                        foreach (var chunk in choice.Delta.ContentChunks)
+                            AddContentFromChunk(chunk, update.Contents);
+                    }
+                    else if (!string.IsNullOrEmpty(choice.Delta?.Content))
+                    {
+                        update.Contents.Add(new TextContent(choice.Delta.Content));
+                    }
 
                     if (choice.Delta?.ToolCalls is { Count: > 0 })
                     {
@@ -377,17 +387,25 @@ namespace Mistral.SDK.Completions
             }
         }
 
-        private static List<AIContent> ProcessResponseContent(ChatCompletionResponse response)
+        public static List<AIContent> ProcessResponseContent(ChatCompletionResponse response)
         {
             List<AIContent> contents = new();
 
-            foreach (var content in response.Choices)
+            foreach (var choice in response.Choices)
             {
-                if (content.Message.ToolCalls is not null)
+                if (choice.Message.ContentChunks is { Count: > 0 })
                 {
-                    contents.Add(new TextContent(content.Message.Content));
+                    foreach (var chunk in choice.Message.ContentChunks)
+                        AddContentFromChunk(chunk, contents);
+                }
+                else
+                {
+                    contents.Add(new TextContent(choice.Message.Content ?? string.Empty));
+                }
 
-                    foreach (var toolCall in content.Message.ToolCalls)
+                if (choice.Message.ToolCalls is not null)
+                {
+                    foreach (var toolCall in choice.Message.ToolCalls)
                     {
                         Dictionary<string, object> arguments = null;
                         if (toolCall.Function.Arguments is not null)
@@ -401,13 +419,29 @@ namespace Mistral.SDK.Completions
                             arguments));
                     }
                 }
-                else
-                {
-                    contents.Add(new TextContent(content.Message.Content));
-                }
             }
 
             return contents;
+        }
+
+        private static void AddContentFromChunk(ChatMessageContentChunk chunk, IList<AIContent> target)
+        {
+            switch (chunk.Type)
+            {
+                case "thinking":
+                    var thinkingText = string.Concat(
+                        chunk.Thinking?
+                            .Where(t => t.Type == "text" && t.Text is not null)
+                            .Select(t => t.Text) ?? []);
+                    if (!string.IsNullOrEmpty(thinkingText))
+                        target.Add(new TextReasoningContent(thinkingText));
+                    break;
+
+                case "text":
+                    if (chunk.Text is not null)
+                        target.Add(new TextContent(chunk.Text));
+                    break;
+            }
         }
 
         void IDisposable.Dispose() { }
@@ -431,6 +465,4 @@ namespace Mistral.SDK.Completions
             public Dictionary<string, JsonElement> Properties { get; set; } = [];
         }
     }
-
-    
 }
