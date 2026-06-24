@@ -56,7 +56,7 @@ namespace Mistral.SDK.Completions
                     ChatRole role = choice.Delta?.Role switch
                     {
                         DTOs.ChatMessage.RoleEnum.System => ChatRole.System,
-                        DTOs.ChatMessage.RoleEnum.Assistant => ChatRole.User,
+                        DTOs.ChatMessage.RoleEnum.Assistant => ChatRole.Assistant,
                         _ => ChatRole.User,
                     };
 
