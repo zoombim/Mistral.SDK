@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿#nullable enable
+using System.Text.Json.Serialization;
 
 namespace Mistral.SDK.DTOs
 {
@@ -9,10 +10,10 @@ namespace Mistral.SDK.DTOs
     /// content is determined by the value of the Type property, and only the corresponding content property (Text,
     /// ImageUrl, or DocumentUrl) should be populated for each instance.
     /// See Mistral cookbook: https://docs.mistral.ai/capabilities/vision</remarks>
-    public sealed class ChatMessageContentChunk
+    public sealed class ChatMessageContentChunk(string type)
     {
         [JsonPropertyName("type")]
-        public string Type { get; set; } = default!; // "text" | "image_url" | "document_url" ...
+        public string Type { get; set; } = type; // "text" | "image_url" | "document_url" ...
 
         [JsonPropertyName("text")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

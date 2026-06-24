@@ -148,9 +148,8 @@ namespace Mistral.SDK.Completions
                         switch (content)
                         {
                             case TextContent tc:
-                                (chunks ??= []).Add(new ChatMessageContentChunk
+                                (chunks ??= []).Add(new ChatMessageContentChunk("text")
                                 {
-                                    Type = "text",
                                     Text = tc.Text
                                 });
                                 break;
@@ -166,9 +165,8 @@ namespace Mistral.SDK.Completions
 
                                 bool isImage = mediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
 
-                                (chunks ??= []).Add(new ChatMessageContentChunk
+                                (chunks ??= []).Add(new ChatMessageContentChunk(isImage ? "image_url" : "document_url")
                                 {
-                                    Type = isImage ? "image_url" : "document_url",
                                     ImageUrl = isImage ? dataUrl : null,
                                     DocumentUrl = !isImage ? dataUrl : null
                                 });
@@ -272,7 +270,6 @@ namespace Mistral.SDK.Completions
 
                     if (i + 1 < next)
                     {
-                        // (former code) request.Messages[i].Content = string.Join("\n", request.Messages.Skip(i).Take(next - i).Select(m => m.Content));
                         // When merging consecutive user messages, if one of them has ContentChunks, we merge the chunks.
                         for (int j = i + 1; j < next; j++)
                             MergeUserMessages(request.Messages[i], request.Messages[j]);
@@ -374,7 +371,7 @@ namespace Mistral.SDK.Completions
                 static void AppendAsChunks(List<ChatMessageContentChunk> target, DTOs.ChatMessage msg)
                 {
                     if (!string.IsNullOrEmpty(msg.Content))
-                        target.Add(new ChatMessageContentChunk { Type = "text", Text = msg.Content });
+                        target.Add(new ChatMessageContentChunk("text") { Text = msg.Content });
 
                     if (msg.ContentChunks is { Count: > 0 })
                         target.AddRange(msg.ContentChunks);
