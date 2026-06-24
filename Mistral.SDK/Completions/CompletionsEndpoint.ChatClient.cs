@@ -188,22 +188,22 @@ namespace Mistral.SDK.Completions
                     }
 
                     // Send the main message (text or multimodal)
-                    if (chunks is { Count: > 0 })
+                    if (chunks == null || chunks.Count == 0)
+                        yield break;
+
+                    // optimization: if it is only a text chunk, we keep the string format (backward compatible)
+                    if (chunks.Count == 1 && chunks[0].Type == "text")
                     {
-                        // optimization: if it is only a text chunk, we keep the string format (backward compatible)
-                        if (chunks.Count == 1 && chunks[0].Type == "text")
+                        yield return new DTOs.ChatMessage(role, chunks[0].Text ?? string.Empty);
+                    }
+                    else
+                    {
+                        yield return new DTOs.ChatMessage()
                         {
-                            yield return new DTOs.ChatMessage(role, chunks[0].Text ?? string.Empty);
-                        }
-                        else
-                        {
-                            yield return new DTOs.ChatMessage()
-                            {
-                                Role = role,
-                                Content = string.Empty, // kept for compatibility
-                                ContentChunks = chunks  // will be serialized as an array
-                            };
-                        }
+                            Role = role,
+                            Content = string.Empty, // kept for compatibility
+                            ContentChunks = chunks  // will be serialized as an array
+                        };
                     }
                 }
             }));
