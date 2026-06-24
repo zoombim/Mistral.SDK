@@ -39,8 +39,6 @@ namespace Mistral.SDK.DTOs
 
         }
 
-
-        [JsonConverter(typeof(JsonPropertyNameEnumConverter<RoleEnum>))]
         public enum RoleEnum
         {
             /// <summary>
