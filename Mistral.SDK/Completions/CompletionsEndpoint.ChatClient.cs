@@ -141,7 +141,7 @@ namespace Mistral.SDK.Completions
                         DTOs.ChatMessage.RoleEnum.User;
 
                     // We collect all multimodal chunks for this message
-                    List<ChatMessageContentChunk>? chunks = null;
+                    List<ChatMessageContentChunk> chunks = null;
 
                     foreach (AIContent content in m.Contents)
                     {
@@ -155,17 +155,11 @@ namespace Mistral.SDK.Completions
                                 break;
 
                             case DataContent dc:
-                                // DataContent (Uri) -> chunk image_url or document_url, depending on MediaType
-                                string mediaType = dc.MediaType;
-                                string dataUrl = dc.Uri;
+                                AddUrlChunk(ref chunks, dc.MediaType, dc.Uri);
+                                break;
 
-                                bool isImage = mediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
-
-                                (chunks ??= []).Add(new ChatMessageContentChunk(isImage ? "image_url" : "document_url")
-                                {
-                                    ImageUrl = isImage ? dataUrl : null,
-                                    DocumentUrl = !isImage ? dataUrl : null
-                                });
+                            case UriContent uc:
+                                AddUrlChunk(ref chunks, uc.MediaType, uc.Uri.AbsoluteUri);
                                 break;
 
                             case FunctionCallContent fcc:
@@ -372,6 +366,16 @@ namespace Mistral.SDK.Completions
                     if (msg.ContentChunks is { Count: > 0 })
                         target.AddRange(msg.ContentChunks);
                 }
+            }
+
+            static void AddUrlChunk(ref List<ChatMessageContentChunk> chunks, string mediaType, string url)
+            {
+                bool isImage = mediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+                (chunks ??= []).Add(new ChatMessageContentChunk(isImage ? "image_url" : "document_url")
+                {
+                    ImageUrl = isImage ? url : null,
+                    DocumentUrl = !isImage ? url : null
+                });
             }
         }
 
