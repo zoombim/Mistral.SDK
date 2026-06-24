@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Mistral.SDK.Converters;
 
@@ -89,7 +88,7 @@ namespace Mistral.SDK.DTOs
         /// </summary>
         /// <remarks>Not serialized directly (the converter handles this).</remarks>
         [JsonIgnore]
-        public List<ChatMessageContentChunk>? ContentChunks { get; set; }
+        public List<ChatMessageContentChunk> ContentChunks { get; set; }
 
         [JsonPropertyName("tool_calls")]
         public List<ToolCall> ToolCalls { get; set; }

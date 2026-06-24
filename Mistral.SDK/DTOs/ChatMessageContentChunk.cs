@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Mistral.SDK.DTOs
 {
@@ -17,14 +16,14 @@ namespace Mistral.SDK.DTOs
 
         [JsonPropertyName("text")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? Text { get; set; }
+        public string Text { get; set; }
 
         [JsonPropertyName("image_url")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? ImageUrl { get; set; }
+        public string ImageUrl { get; set; }
 
         [JsonPropertyName("document_url")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? DocumentUrl { get; set; }
+        public string DocumentUrl { get; set; }
     }
 }
