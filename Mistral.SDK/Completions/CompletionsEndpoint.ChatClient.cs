@@ -157,11 +157,7 @@ namespace Mistral.SDK.Completions
                             case DataContent dc:
                                 // DataContent (Uri) -> chunk image_url or document_url, depending on MediaType
                                 string mediaType = dc.MediaType;
-                                string dataUrl = string.IsNullOrEmpty(dc.Uri) ?
-                                    // If dc.Uri, we can reconstruct "data:<mime>;base64,..." from dc.Data bytes here.
-                                    $"data:{mediaType};base64,{Convert.ToBase64String(dc.Data.ToArray())}" :
-                                    // But as we should receive a DataContent with a valid Uri & MediaType, this is just a fallback.
-                                    dc.Uri;
+                                string dataUrl = dc.Uri;
 
                                 bool isImage = mediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
 
