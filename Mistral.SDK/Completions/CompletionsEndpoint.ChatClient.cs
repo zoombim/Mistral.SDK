@@ -353,27 +353,32 @@ namespace Mistral.SDK.Completions
 
             static void MergeUserMessages(DTOs.ChatMessage into, DTOs.ChatMessage other)
             {
-                // If no multimodal: former logic
-                if ((into.ContentChunks is null || into.ContentChunks.Count == 0)
-                    && (other.ContentChunks is null || other.ContentChunks.Count == 0))
+                bool intoHasChunks = into.ContentChunks is { Count: > 0 };
+                bool otherHasChunks = other.ContentChunks is { Count: > 0 };
+
+                // Fast path: plain text on both sides, keep the legacy string form.
+                if (!intoHasChunks && !otherHasChunks)
                 {
                     into.Content = string.Join("\n", into.Content, other.Content);
                     return;
                 }
 
-                into.ContentChunks ??= new List<ChatMessageContentChunk>();
+                // Otherwise normalise everything to chunks so no text is lost.
+                var merged = new List<ChatMessageContentChunk>();
+                AppendAsChunks(merged, into);
+                AppendAsChunks(merged, other);
 
-                // Converts existing text content into chunks if necessary
-                if (!string.IsNullOrEmpty(into.Content) && into.ContentChunks.Count == 0)
-                    into.ContentChunks.Add(new ChatMessageContentChunk { Type = "text", Text = into.Content });
-
-                // Adds chunks from other
-                if (other.ContentChunks is { Count: > 0 })
-                    into.ContentChunks.AddRange(other.ContentChunks);
-                else if (!string.IsNullOrEmpty(other.Content))
-                    into.ContentChunks.Add(new ChatMessageContentChunk { Type = "text", Text = other.Content });
-
+                into.ContentChunks = merged;
                 into.Content = string.Empty;
+
+                static void AppendAsChunks(List<ChatMessageContentChunk> target, DTOs.ChatMessage msg)
+                {
+                    if (!string.IsNullOrEmpty(msg.Content))
+                        target.Add(new ChatMessageContentChunk { Type = "text", Text = msg.Content });
+
+                    if (msg.ContentChunks is { Count: > 0 })
+                        target.AddRange(msg.ContentChunks);
+                }
             }
         }
 
