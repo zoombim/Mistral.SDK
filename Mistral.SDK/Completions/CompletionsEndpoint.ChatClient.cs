@@ -142,6 +142,7 @@ namespace Mistral.SDK.Completions
 
                     // We collect all multimodal chunks for this message
                     List<ChatMessageContentChunk> chunks = null;
+                    List<ToolCall> toolCalls = null;
 
                     foreach (AIContent content in m.Contents)
                     {
@@ -163,28 +164,32 @@ namespace Mistral.SDK.Completions
                                 break;
 
                             case FunctionCallContent fcc:
-                                yield return new DTOs.ChatMessage
+                                (toolCalls ??= []).Add(new()
                                 {
-                                    Role = DTOs.ChatMessage.RoleEnum.Assistant,
-                                    ToolCalls =
-                                    [
-                                        new()
-                                        {
-                                            Id = fcc.CallId,
-                                            Function = new ToolCallParameter()
-                                            {
-                                                Arguments = JsonSerializer.SerializeToNode(fcc.Arguments),
-                                                Name = fcc.Name,
-                                            }
-                                        }
-                                    ]
-                                };
+                                    Id = fcc.CallId,
+                                    Function = new ToolCallParameter()
+                                    {
+                                        Arguments = JsonSerializer.SerializeToNode(fcc.Arguments),
+                                        Name = fcc.Name,
+                                    }
+                                });
                                 break;
 
                             case FunctionResultContent frc:
                                 yield return new DTOs.ChatMessage(frc.CallId, frc.CallId, frc.Result?.ToString());
                                 break;
                         }
+                    }
+
+                    if (toolCalls is { Count: > 0 })
+                    {
+                        yield return new DTOs.ChatMessage
+                        {
+                            Role = DTOs.ChatMessage.RoleEnum.Assistant,
+                            Content = chunks is { Count: > 0 } && chunks[0].Type == "text" ? chunks[0].Text : string.Empty,
+                            ToolCalls = toolCalls,
+                        };
+                        yield break;
                     }
 
                     // Send the main message (text or multimodal)
