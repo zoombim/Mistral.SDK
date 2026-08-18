@@ -49,7 +49,7 @@ namespace Mistral.SDK.Completions
         async IAsyncEnumerable<ChatResponseUpdate> IChatClient.GetStreamingResponseAsync(
             IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, ChatOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            await foreach (var response in StreamCompletionAsync(CreateRequest(messages, options), cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false))
+            await foreach (var response in StreamCompletionAsync(CreateRequest(messages, options), cancellationToken).ConfigureAwait(false))
             {
                 foreach (var choice in response.Choices)
                 {
@@ -131,6 +131,7 @@ namespace Mistral.SDK.Completions
             request.Messages.AddRange(chatMessages.SelectMany(m =>
             {
                 return ToChatMessageDTO(m);
+
                 static IEnumerable<DTOs.ChatMessage> ToChatMessageDTO(Microsoft.Extensions.AI.ChatMessage m)
                 {
                     DTOs.ChatMessage.RoleEnum role =
@@ -139,37 +140,75 @@ namespace Mistral.SDK.Completions
                         m.Role == ChatRole.Tool ? DTOs.ChatMessage.RoleEnum.Tool :
                         DTOs.ChatMessage.RoleEnum.User;
 
+                    // We collect all multimodal chunks for this message
+                    List<ChatMessageContentChunk> chunks = null;
+                    List<ToolCall> toolCalls = null;
+
                     foreach (AIContent content in m.Contents)
                     {
                         switch (content)
                         {
-                            case Microsoft.Extensions.AI.TextContent tc:
-                                yield return new DTOs.ChatMessage(role, tc.Text);
-                                break;
-
-                            case Microsoft.Extensions.AI.FunctionCallContent fcc:
-                                yield return new DTOs.ChatMessage()
+                            case TextContent tc:
+                                (chunks ??= []).Add(new ChatMessageContentChunk("text")
                                 {
-                                    Role = DTOs.ChatMessage.RoleEnum.Assistant,
-                                    ToolCalls = new List<ToolCall>()
-                                    {
-                                        new ToolCall()
-                                        {
-                                            Id = fcc.CallId,
-                                            Function = new ToolCallParameter()
-                                            {
-                                                Arguments = JsonSerializer.SerializeToNode(fcc.Arguments),
-                                                Name = fcc.Name,
-                                            }
-                                        }
-                                    }
-                                };
+                                    Text = tc.Text
+                                });
                                 break;
 
-                            case Microsoft.Extensions.AI.FunctionResultContent frc:
+                            case DataContent dc:
+                                AddUrlChunk(ref chunks, dc.MediaType, dc.Uri);
+                                break;
+
+                            case UriContent uc:
+                                AddUrlChunk(ref chunks, uc.MediaType, uc.Uri.AbsoluteUri);
+                                break;
+
+                            case FunctionCallContent fcc:
+                                (toolCalls ??= []).Add(new()
+                                {
+                                    Id = fcc.CallId,
+                                    Function = new ToolCallParameter()
+                                    {
+                                        Arguments = JsonSerializer.SerializeToNode(fcc.Arguments),
+                                        Name = fcc.Name,
+                                    }
+                                });
+                                break;
+
+                            case FunctionResultContent frc:
                                 yield return new DTOs.ChatMessage(frc.CallId, frc.CallId, frc.Result?.ToString());
                                 break;
                         }
+                    }
+
+                    if (toolCalls is { Count: > 0 })
+                    {
+                        yield return new DTOs.ChatMessage
+                        {
+                            Role = DTOs.ChatMessage.RoleEnum.Assistant,
+                            Content = chunks is { Count: > 0 } && chunks[0].Type == "text" ? chunks[0].Text : string.Empty,
+                            ToolCalls = toolCalls,
+                        };
+                        yield break;
+                    }
+
+                    // Send the main message (text or multimodal)
+                    if (chunks == null || chunks.Count == 0)
+                        yield break;
+
+                    // optimization: if it is only a text chunk, we keep the string format (backward compatible)
+                    if (chunks.Count == 1 && chunks[0].Type == "text")
+                    {
+                        yield return new DTOs.ChatMessage(role, chunks[0].Text ?? string.Empty);
+                    }
+                    else
+                    {
+                        yield return new DTOs.ChatMessage()
+                        {
+                            Role = role,
+                            Content = string.Empty, // kept for compatibility
+                            ContentChunks = chunks  // will be serialized as an array
+                        };
                     }
                 }
             }));
@@ -226,7 +265,9 @@ namespace Mistral.SDK.Completions
 
                     if (i + 1 < next)
                     {
-                        request.Messages[i].Content = string.Join("\n", request.Messages.Skip(i).Take(next - i).Select(m => m.Content));
+                        // When merging consecutive user messages, if one of them has ContentChunks, we merge the chunks.
+                        for (int j = i + 1; j < next; j++)
+                            MergeUserMessages(request.Messages[i], request.Messages[j]);
                         request.Messages.RemoveRange(i + 1, next - (i + 1));
                     }
                 }
@@ -301,6 +342,46 @@ namespace Mistral.SDK.Completions
             }
 
             return request;
+
+            static void MergeUserMessages(DTOs.ChatMessage into, DTOs.ChatMessage other)
+            {
+                bool intoHasChunks = into.ContentChunks is { Count: > 0 };
+                bool otherHasChunks = other.ContentChunks is { Count: > 0 };
+
+                // Fast path: plain text on both sides, keep the legacy string form.
+                if (!intoHasChunks && !otherHasChunks)
+                {
+                    into.Content = string.Join("\n", into.Content, other.Content);
+                    return;
+                }
+
+                // Otherwise normalise everything to chunks so no text is lost.
+                var merged = new List<ChatMessageContentChunk>();
+                AppendAsChunks(merged, into);
+                AppendAsChunks(merged, other);
+
+                into.ContentChunks = merged;
+                into.Content = string.Empty;
+
+                static void AppendAsChunks(List<ChatMessageContentChunk> target, DTOs.ChatMessage msg)
+                {
+                    if (!string.IsNullOrEmpty(msg.Content))
+                        target.Add(new ChatMessageContentChunk("text") { Text = msg.Content });
+
+                    if (msg.ContentChunks is { Count: > 0 })
+                        target.AddRange(msg.ContentChunks);
+                }
+            }
+
+            static void AddUrlChunk(ref List<ChatMessageContentChunk> chunks, string mediaType, string url)
+            {
+                bool isImage = mediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+                (chunks ??= []).Add(new ChatMessageContentChunk(isImage ? "image_url" : "document_url")
+                {
+                    ImageUrl = isImage ? url : null,
+                    DocumentUrl = !isImage ? url : null
+                });
+            }
         }
 
         private static List<AIContent> ProcessResponseContent(ChatCompletionResponse response)
@@ -311,7 +392,7 @@ namespace Mistral.SDK.Completions
             {
                 if (content.Message.ToolCalls is not null)
                 {
-                    contents.Add(new Microsoft.Extensions.AI.TextContent(content.Message.Content));
+                    contents.Add(new TextContent(content.Message.Content));
 
                     foreach (var toolCall in content.Message.ToolCalls)
                     {
@@ -329,7 +410,7 @@ namespace Mistral.SDK.Completions
                 }
                 else
                 {
-                    contents.Add(new Microsoft.Extensions.AI.TextContent(content.Message.Content));
+                    contents.Add(new TextContent(content.Message.Content));
                 }
             }
 
@@ -340,9 +421,8 @@ namespace Mistral.SDK.Completions
 
         object IChatClient.GetService(Type serviceType, object serviceKey) =>
             serviceKey is not null ? null :
-            serviceType == typeof(ChatClientMetadata) ? (_metadata ??= new ChatClientMetadata(nameof(MistralClient), new Uri(Url))) :
-            serviceType?.IsInstanceOfType(this) is true ? this : 
-            null;
+            serviceType == typeof(ChatClientMetadata) ? _metadata ??= new ChatClientMetadata(nameof(MistralClient), new Uri(Url)) :
+            serviceType.IsInstanceOfType(this) ? this : null;
 
         private ChatClientMetadata _metadata;
 
