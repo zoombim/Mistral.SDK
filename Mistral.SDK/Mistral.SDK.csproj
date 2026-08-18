@@ -1,25 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net6.0;net8.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net6.0;net8.0;net10.0</TargetFrameworks>
 	<LangVersion>latest</LangVersion>
 	<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-	<Authors>Grant Hamm</Authors>
+	<Authors>Grant Hamm, WEM No-Code</Authors>
 	<Product>Mistral API</Product>
 	<Description>A C# / .NET library to use with Mistral's API.  Supports Streaming, Embedding, Semantic Kernel Integration.</Description>
 	<Copyright>This library is licensed MIT, in the public domain</Copyright>
 	<PackageLicenseExpression>MIT</PackageLicenseExpression>
-	<PackageProjectUrl>https://github.com/tghamm/Mistral.SDK</PackageProjectUrl>
-	<RepositoryUrl>https://github.com/tghamm/Mistral.SDK</RepositoryUrl>
+	<PackageProjectUrl>https://github.com/zoombim/Mistral.SDK</PackageProjectUrl>
+	<RepositoryUrl>https://github.com/zoombim/Mistral.SDK</RepositoryUrl>
 	<PackageTags>Mistral, AI, ML, API, C#, .NET, Mixtral</PackageTags>
 	<Title>Mistral API</Title>
 	<PackageReleaseNotes>
-		Updates Microsoft.Extensions.AI.Abstractions and implements various improvements and bug fixes.
+		Adds image &amp; document support to Mistral ChatClient by serializing DataContent as multimodal chunks.
 	</PackageReleaseNotes>
 	<PackageId>Mistral.SDK</PackageId>
-	<Version>2.3.1</Version>
-	<AssemblyVersion>2.3.0.0</AssemblyVersion>
-	<FileVersion>2.3.1.0</FileVersion>
+	<Version>2.4.0</Version>
+	<AssemblyVersion>2.4.0.0</AssemblyVersion>
+	<FileVersion>2.4.0.0</FileVersion>
 	<GenerateDocumentationFile>True</GenerateDocumentationFile>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
 	<ProduceReferenceAssembly>True</ProduceReferenceAssembly>
