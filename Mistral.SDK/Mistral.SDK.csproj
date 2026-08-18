@@ -11,15 +11,11 @@
 	<PackageLicenseExpression>MIT</PackageLicenseExpression>
 	<PackageProjectUrl>https://github.com/zoombim/Mistral.SDK</PackageProjectUrl>
 	<RepositoryUrl>https://github.com/zoombim/Mistral.SDK</RepositoryUrl>
+	<PackageReleaseNotes>https://github.com/zoombim/Mistral.SDK/releases</PackageReleaseNotes>
 	<PackageTags>Mistral, AI, ML, API, C#, .NET, Mixtral</PackageTags>
 	<Title>Mistral API</Title>
-	<PackageReleaseNotes>
-		Adds image &amp; document support to Mistral ChatClient by serializing DataContent as multimodal chunks.
-	</PackageReleaseNotes>
-	<PackageId>Mistral.SDK</PackageId>
-	<Version>2.4.0</Version>
-	<AssemblyVersion>2.4.0.0</AssemblyVersion>
-	<FileVersion>2.4.0.0</FileVersion>
+	<PackageId>Wem.Mistral.SDK</PackageId>
+	<AssemblyVersion>1.0.0.0</AssemblyVersion>
 	<GenerateDocumentationFile>True</GenerateDocumentationFile>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
 	<ProduceReferenceAssembly>True</ProduceReferenceAssembly>
