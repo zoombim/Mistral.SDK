@@ -1,6 +1,7 @@
 # Mistral.SDK
 
-[![.NET](https://github.com/tghamm/Mistral.SDK/actions/workflows/dotnet.yml/badge.svg)](https://github.com/tghamm/Mistral.SDK/actions/workflows/dotnet.yml) [![Nuget](https://img.shields.io/nuget/v/Mistral.SDK)](https://www.nuget.org/packages/Mistral.SDK/)
+[![](https://img.shields.io/github/actions/workflow/status/zoombim/Mistral.SDK/dotnet.yml?label=build&logo=github)](https://github.com/zoombim/Mistral.SDK/actions/workflows/dotnet.yml?query=branch%3Amain+event%3Apush)
+[![](https://img.shields.io/nuget/v/Wem.Mistral.SDK?logo=nuget)](https://www.nuget.org/packages/Wem.Mistral.SDK/)
 
 Mistral.SDK is an unofficial C# client designed for interacting with the Mistral API. This powerful interface simplifies the integration of Mistral AI into your C# applications.  It targets netstandard2.0, .net6.0 and .net8.0.
 
